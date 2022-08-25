@@ -1,8 +1,8 @@
 CFLAGS=-g -Wall -Wshadow -Wextra
 
-target/reg2dfa: src/main.c
+target/regex-to-c: src/main.c
 	mkdir -p target
-	$(CC) $(CFLAGS) -o target/reg2dfa -O2 src/main.c
+	$(CC) $(CFLAGS) -o target/regex-to-c -O2 src/main.c
 
 clean:
 	rm -rf target/*
