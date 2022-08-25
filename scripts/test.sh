@@ -21,7 +21,7 @@ str=$2
 
 EOF
 
-  ./reg2dfa "$regexp" >> "$name".c
+  ./regex-to-c "$regexp" >> "$name".c
 
   cat << EOF >> "$name".c
 int main(int argc, char *argv[]) {
