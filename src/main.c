@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <ctype.h>
 
 void unimplemented(const char *msg) {
     fprintf(stderr, "unimplemented: %s\n", msg);
@@ -86,21 +87,6 @@ Token Token_new(void) {
     return result;
 }
 
-Token get_token_escaped(void) {
-    // TODO 处理正则表达式中的转义字符
-    Token result = Token_new();
-
-    pattern_read_pos += 1;
-    result.type = T_CHARSET;
-    result.allowed[(int)*pattern_read_pos] = true;
-    pattern_read_pos += 1;
-
-    return result;
-}
-
-#define cmp_class(s, class_name, shift) \
-    (!strncmp(s, class_name, strlen(class_name)) && (shift = strlen(class_name)) > 0)
-
 static void fill_by_range(int begin, int end, bool *ch, bool fill) {
     for (int i = begin; i <= end; ++i) {
         ch[i] = fill;
@@ -114,9 +100,86 @@ static void fill_by_string(char *s, bool *ch, bool fill) {
     }
 }
 
-static void fill_by_char(char c, bool *ch, bool fill) {
+static void fill_by_char(int c, bool *ch, bool fill) {
     ch[c] = fill;
 }
+
+Token get_token_escaped(void) {
+    Token result = Token_new();
+
+    pattern_read_pos += 1;
+    result.type = T_CHARSET;
+    char c = *pattern_read_pos;
+    switch (c) {
+    case '\0':
+        panic("regex expression should not end with '\\'");
+        break;
+    case 'd':
+        fill_by_range('0', '9', result.allowed, true);
+        break;
+    case 'D':
+        fill_by_range(1, 255, result.allowed, true);
+        fill_by_range('0', '9', result.allowed, false);
+        break;
+    case 'f':
+        fill_by_char('\x0c', result.allowed, true);
+        break;
+    case 'n':
+        fill_by_char('\x0a', result.allowed, true);
+        break;
+    case 'r':
+        fill_by_char('\x0d', result.allowed, true);
+        break;
+    case 's':
+        fill_by_string(" \f\n\r\t\v", result.allowed, true);
+        break;
+    case 'S':
+        fill_by_range(1, 255, result.allowed, true);
+        fill_by_string(" \f\n\r\t\v", result.allowed, false);
+        break;
+    case 't':
+        fill_by_char('\x09', result.allowed, true);
+        break;
+    case 'v':
+        fill_by_char('\x0b', result.allowed, true);
+        break;
+    case 'w':
+        fill_by_range('a', 'z', result.allowed, true);
+        fill_by_range('A', 'Z', result.allowed, true);
+        fill_by_range('0', '9', result.allowed, true);
+        fill_by_char('-', result.allowed, true);
+        break;
+    case 'W':
+        fill_by_range(1, 255, result.allowed, true);
+        fill_by_range('a', 'z', result.allowed, false);
+        fill_by_range('A', 'Z', result.allowed, false);
+        fill_by_range('0', '9', result.allowed, false);
+        fill_by_char('-', result.allowed, false);
+        break;
+    case 'x':
+        if (pattern_read_pos[1] == '\0' || pattern_read_pos[2] == '\0') {
+            panic("'\\xnn' needs two more xdigits");
+        }
+        if (isxdigit(pattern_read_pos[1]) && isxdigit(pattern_read_pos[2])) {
+            int xd;
+            sscanf(pattern_read_pos + 1, "%x", &xd);
+            fill_by_char(xd, result.allowed, true);
+            pattern_read_pos += 2;
+        } else {
+            panic("'\\xnn' needs two xdigits");
+        }
+        break;
+    default:
+        result.allowed[(int)*pattern_read_pos] = true;
+        break;
+    }
+    pattern_read_pos += 1;
+
+    return result;
+}
+
+#define cmp_class(s, class_name, shift) \
+    (!strncmp(s, class_name, strlen(class_name)) && (shift = strlen(class_name)) > 0)
 
 Token get_token_charset(void) {
     Token result = Token_new();
@@ -144,7 +207,7 @@ Token get_token_charset(void) {
     while (*pattern_read_pos != ']') {
         switch (*pattern_read_pos) {
         case '\0':
-            panic("bracket should be ended with ']'");
+            panic("bracket should end with ']'");
             break;
         case '-':
             if (pattern_read_pos[1] != ']') {
@@ -209,7 +272,7 @@ Token get_token_charset(void) {
             }
             pattern_read_pos += shift;
             if (strncmp(pattern_read_pos, ":]", 2) != 0) {
-                panic("character class should be ended with \":]\"");
+                panic("character class should end with \":]\"");
             }
             pattern_read_pos += 2;
             break;
