@@ -352,24 +352,22 @@ int translate_atom(AtomNode *atom) {
 
     if (atom->is_simple_atom) {
         printf("\
-void atom%03d(int *len, int *success, char *str) { // %s\n\
-    *len = 0, *success = 0;\n\
+int atom%03d(char *str) { // %s\n\
+    switch (*str) {\n\
 ", cnt, atom->annotation);
-
-        printf("    switch (*str) {\n");
         for (int i = 0; i < 256; ++i)
             if (atom->u.allowed[i])
-                printf("        case %d: { *len = 1; *success = 1; break; }\n", i);
-        printf("        default: { *len = 0; *success = 0; break; }\n");
-        printf("    }\n");
-        printf("}\n");
+                printf("        case %d: return 1;\n", i);
+        printf("\
+    }\n\
+    return 0;\n\
+}\n");
     } else {
         int id = translate_regex(atom->u.regex);
 
         printf("\
-void atom%03d(int *len, int *success, char *str) { // %s\n\
-    *len = 0, *success = 0;\n\
-    regex%03d(len, success, str);\n\
+int atom%03d(char *str) { // %s\n\
+    return regex%03d(str);\n\
 }\n\
 ", cnt, atom->annotation, id);
     }
@@ -381,47 +379,45 @@ int translate_piece(PieceNode *piece) {
     static int cnt = 0;
     int id = translate_atom(piece->atom);
     printf("\n\
-void piece%03d(int *len, int *success, char *str) { // %s\n\
-    *len = 0, *success = 0;\n\
+int piece%03d(char *str) { // %s\n\
+    char *str_old = str;\n\
     for (int i = 0; i < %d; ++i) {\n\
-        int s, l;\n\
-        atom%03d(&l, &s, str);\n\
-        if (!s) {\n\
-            *success = 0;\n\
-            return;\n\
+        int len = atom%03d(str);\n\
+        if (len == 0) {\n\
+            return 0;\n\
         } else {\n\
-            *len += l, str += l;\n\
+            str += len;\n\
         }\n\
     }\n\
-    *success = 1;\n\
 ", cnt, piece->annotation, piece->min, id);
 
     if (piece->max == -1) {
         printf("\n\
     for (;;) {\n\
-        int s, l;\n\
-        atom%03d(&l, &s, str);\n\
-        if (!s) {\n\
-            return;\n\
+        int len = atom%03d(str);\n\
+        if (len == 0) {\n\
+            break;\n\
         } else {\n\
-            *len += l, str += l;\n\
+            str += len;\n\
         }\n\
     }\n\
 ", id);
     } else {
         printf("\n\
     for (int i = %d; i < %d; ++i) {\n\
-        int s, l;\n\
-        atom%03d(&l, &s, str);\n\
-        if (!s) {\n\
-            return;\n\
+        int len = atom%03d(str);\n\
+        if (len == 0) {\n\
+            break;\n\
         } else {\n\
-            *len += l, str += l;\n\
+            str += len;\n\
         }\n\
     }\n\
 ", piece->min, piece->max, id);
     }
-    printf("}\n");
+
+    printf("\
+    return str - str_old;\n\
+}\n");
 
     return cnt++;
 }
@@ -432,24 +428,25 @@ int translate_branch(BranchNode *branch) {
     for (int i = 0; i < branch->size; ++i)
         pieces[i] = translate_piece(branch->pieces[i]);
     printf("\n\
-void branch%03d(int *len, int *success, char *str) { // %s\n\
-    int l, s;\n\
-    *success = 0, *len = 0; \n\
+int branch%03d(char *str) { // %s\n\
+    char *str_old = str;\n\
+    int len = 0;\n\
 ", cnt, branch->annotation);
     for (int i = 0; i < branch->size; ++i)
         printf("\n\
-    piece%03d(&l, &s, str);\n\
-    if (!s) {\n\
-        *success = 0; *len = 0;\n\
-        return;\n\
+    len = piece%03d(str);\n\
+    if (len == 0) {\n\
+        return 0;\n\
     } else {\n\
-        *success = 1; *len += l; str += l;\n\
+        str += len;\n\
     }\n\
 ", pieces[i]);
 
     free(pieces);
 
-    printf("}\n");
+    printf("\
+    return str - str_old;\n\
+}\n");
     return cnt++;
 }
 
@@ -459,22 +456,20 @@ int translate_regex(RegexNode *regex) {
     for (int i = 0; i < regex->size; ++i)
         branches[i] = translate_branch(regex->branches[i]);
     printf("\n\
-void regex%03d(int *len, int *success, char *str) { // %s\n\
-    int l, s;\n\
-    *success = 0, *len = 0; \n\
+int regex%03d(char *str) { // %s\n\
+    int len = 0;\n\
 ", cnt, regex->annotation);
     for (int i = 0; i < regex->size; ++i)
         printf("\n\
-    branch%03d(&l, &s, str);\n\
-    if (s) {\n\
-        *success = 1; *len = l;\n\
-        return;\n\
-    } else {\n\
-        *success = 0; *len = 0;\n\
+    len = branch%03d(str);\n\
+    if (len != 0) {\n\
+        return len;\n\
     }\n\
 ", branches[i]);
 
-    printf("}\n");
+    printf("\
+    return 0;\n\
+}\n");
 
     free(branches);
     return cnt++;
@@ -483,15 +478,9 @@ void regex%03d(int *len, int *success, char *str) { // %s\n\
 void do_you_like_c(RegexNode *regex) {
     int id = translate_regex(regex);
     printf("\n\
-int match(int *len, int *success, char *str) {\n\
-    if (len == NULL || success == NULL) {\n\
-        int l, s;\n\
-        regex%03d(len, success, str);\n\
-    } else {\n\
-        regex%03d(len, success, str);\n\
-    }\n\
-    return *success;\n\
-}\n", id, id);
+int match(char *str) {\n\
+    return regex%03d(str);\n\
+}\n", id);
 }
 
 int main(int argc, char *argv[]) {
