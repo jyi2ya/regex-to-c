@@ -353,7 +353,7 @@ int translate_atom(AtomNode *atom) {
     if (atom->is_simple_atom) {
         printf("\
 int atom%03d(char *str) { // %s\n\
-    switch (*str) {\n\
+    switch (((int)*str + 256) %% 256) {\n\
 ", cnt, atom->annotation);
         for (int i = 0; i < 256; ++i)
             if (atom->u.allowed[i])
