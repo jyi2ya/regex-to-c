@@ -414,7 +414,7 @@ Token get_token(void) {
 }
 
 char *get_token_annotation(Token t) {
-    char *result = strndup(t.anno_start, t.anno_len);
+    char *result = xstrndup(t.anno_start, t.anno_len);
     return result;
 }
 
