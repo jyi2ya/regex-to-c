@@ -10,7 +10,7 @@ void unimplemented(const char *msg) {
 }
 
 void panic(const char *msg) {
-    fprintf(stderr, "panic: %s", msg);
+    fprintf(stderr, "panic: %s\n", msg);
     abort();
 }
 
@@ -98,30 +98,126 @@ Token get_token_escaped(void) {
     return result;
 }
 
+#define cmp_class(s, class_name, shift) \
+    (!strncmp(s, class_name, strlen(class_name)) && (shift = strlen(class_name)) > 0)
+
+static void fill_by_range(int begin, int end, bool *ch, bool fill) {
+    for (int i = begin; i <= end; ++i) {
+        ch[i] = fill;
+    }
+}
+
+static void fill_by_string(char *s, bool *ch, bool fill) {
+    while (*s) {
+        ch[(int)*s] = fill;
+        s++;
+    }
+}
+
+static void fill_by_char(char c, bool *ch, bool fill) {
+    ch[c] = fill;
+}
+
 Token get_token_charset(void) {
-    // TODO 更好地解析字符集
     Token result = Token_new();
+    result.type = T_CHARSET;
+
+    bool fill = true;
 
     pattern_read_pos += 1;
-    result.type = T_CHARSET;
+    // for the first character in the bracket
+    char first = *pattern_read_pos;
+    if (first == ']' || first == '-') {
+        result.allowed[(int)first] = fill;
+        pattern_read_pos += 1;
+    } else if (first == '^') {
+        fill_by_range(1, 255, result.allowed, fill);
+        fill = false;
+        pattern_read_pos += 1;
+        first = *pattern_read_pos;
+        if (first == ']' || first == '-') {
+            result.allowed[(int)first] = fill;
+            pattern_read_pos += 1;
+        }
+    }
 
     while (*pattern_read_pos != ']') {
         switch (*pattern_read_pos) {
-            case '-' :
-                if (pattern_read_pos[1] != ']') {
-                    for (int i = pattern_read_pos[-1]; i <= pattern_read_pos[1]; ++i)
-                        result.allowed[i] = true;
-                    pattern_read_pos += 2;
-                } else {
-                    result.allowed[(int)*pattern_read_pos] = true;
-                    pattern_read_pos += 1;
-                }
-                break;
-
-            default:
-                result.allowed[(int)*pattern_read_pos] = true;
+        case '\0':
+            panic("bracket should be ended with ']'");
+            break;
+        case '-':
+            if (pattern_read_pos[1] != ']') {
+                fill_by_range((int)pattern_read_pos[-1], \
+                        (int)pattern_read_pos[1], result.allowed, fill);
                 pattern_read_pos += 1;
-                break;
+            } else { // ']' can be the last character in bracket
+                result.allowed[(int)*pattern_read_pos] = fill;
+            }
+            pattern_read_pos += 1;
+            break;
+        case '[':
+            if (pattern_read_pos[1] != ':') {
+                goto not_special;
+            }
+
+            // character class
+            // support: ascii, alnum, alpha, blank, cntrl, digit, graph, lower,
+            // print, punct, space, upper, word, xdigit
+            pattern_read_pos += 2;
+            int shift = 0;
+            if (cmp_class(pattern_read_pos, "ascii", shift)) {
+                fill_by_range(0, 255, result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "alnum", shift)) {
+                fill_by_range('a', 'z', result.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "alpha", shift)) {
+                fill_by_range('a', 'z', result.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "blank", shift)) {
+                fill_by_string(" \t", result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "cntrl", shift)) {
+                fill_by_range('\x01', '\x1F', result.allowed, fill);
+                fill_by_char('\x7F', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "digit", shift)) {
+                fill_by_range('0', '9', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "graph", shift)) {
+                fill_by_range('\x21', '\x7E', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "lower", shift)) {
+                fill_by_range('a', 'z', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "print", shift)) {
+                fill_by_range('\x20', '\x7E', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "punct", shift)) {
+                fill_by_string("][!\"#$%&'()*+,./:;<=>?@\\^_`{|}~-", result.allowed, \
+                        fill);
+            } else if (cmp_class(pattern_read_pos, "space", shift)) {
+                fill_by_string(" \t\r\n\v\f", result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "upper", shift)) {
+                fill_by_range('A', 'Z', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "word", shift)) {
+                fill_by_range('a', 'z', result.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
+                fill_by_char('-', result.allowed, fill);
+            } else if (cmp_class(pattern_read_pos, "xdigit", shift)) {
+                fill_by_range('a', 'f', result.allowed, fill);
+                fill_by_range('A', 'F', result.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
+            } else {
+                panic("invalid character class name");
+            }
+            pattern_read_pos += shift;
+            if (strncmp(pattern_read_pos, ":]", 2) != 0) {
+                panic("character class should be ended with \":]\"");
+            }
+            pattern_read_pos += 2;
+            break;
+        default:
+not_special:
+            result.allowed[(int)*pattern_read_pos] = fill;
+            pattern_read_pos += 1;
+            break;
         }
     }
 
