@@ -148,7 +148,8 @@ Token get_token(void) {
         pattern_read_pos += 1;
     } else if (*pattern_read_pos == '.') {
         result.type = T_CHARSET;
-        for (int i = 0; i < 256; ++i)
+        // `.` should not match '\0'
+        for (int i = 1; i < 256; ++i)
             result.allowed[i] = true;
         pattern_read_pos += 1;
     } else if (*pattern_read_pos == '[') {
