@@ -389,7 +389,7 @@ Token get_token(void) {
         result = get_token_bound();
     } else if (strchr("^$*+?{}()|", *pattern_read_pos) != NULL) {
         result.type = T_META;
-        result.u.allowed[(int)*pattern_read_pos] = true;
+        result.u.metachar = *pattern_read_pos;
         pattern_read_pos += 1;
     } else if (*pattern_read_pos == '.') {
         result.type = T_CHARSET;
@@ -448,7 +448,7 @@ AtomNode *parse_atom(void) {
     Token lookahead = get_token();
 
     if (lookahead.type == T_META) {
-        if (lookahead.u.allowed['(']) {
+        if (lookahead.u.metachar == '(') {
             result->is_simple_atom = false;
             result->u.regex = parse_regex();
             result->annotation = xstrdup("(");
@@ -489,15 +489,15 @@ PieceNode *parse_piece(void) {
 
     Token lookahead = get_token();
     if (lookahead.type == T_META) {
-        if (lookahead.u.allowed['*']) {
+        if (lookahead.u.metachar == '*') {
             result->min = 0;
             result->max = -1;
             result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
-        } else if (lookahead.u.allowed['+']) {
+        } else if (lookahead.u.metachar == '+') {
             result->min = 1;
             result->max = -1;
             result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
-        } else if (lookahead.u.allowed['?']) {
+        } else if (lookahead.u.metachar == '?') {
             result->min = 0;
             result->max = 1;
             result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
@@ -532,8 +532,8 @@ BranchNode *parse_branch(void) {
         Token lookahead = get_token();
 
         if (lookahead.type == T_END
-                || (lookahead.type == T_META && lookahead.u.allowed[')'])
-                || (lookahead.type == T_META && lookahead.u.allowed['|'])) {
+                || (lookahead.type == T_META && lookahead.u.metachar == ')')
+                || (lookahead.type == T_META && lookahead.u.metachar == '|')) {
             unget_token(lookahead);
             break;
         }
@@ -562,7 +562,7 @@ RegexNode *parse_regex(void) {
         Token lookahead = get_token();
 
         if (lookahead.type == T_END
-                || (lookahead.type == T_META && lookahead.u.allowed[')'])) {
+                || (lookahead.type == T_META && lookahead.u.metachar == ')')) {
             break;
         }
 
@@ -574,7 +574,7 @@ RegexNode *parse_regex(void) {
             result->size += 1;
             first = false;
         } else {
-            if (lookahead.type == T_META && lookahead.u.allowed['|']) {
+            if (lookahead.type == T_META && lookahead.u.metachar == '|') {
                 result->branches = xrealloc(result->branches, (result->size + 1) * sizeof(BranchNode*));
                 result->branches[result->size] = parse_branch();
                 result->annotation = xstrcat(result->annotation, "|");
