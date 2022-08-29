@@ -608,7 +608,7 @@ int atom%03d(char *str) { // %s\n\
                 printf("        case %d: return 1;\n", i);
         printf("\
     }\n\
-    return 0;\n\
+    return -1;\n\
 }\n");
     } else {
         int id = translate_regex(atom->u.regex);
@@ -631,8 +631,8 @@ int piece%03d(char *str) { // %s\n\
     char *str_old = str;\n\
     for (int i = 0; i < %d; ++i) {\n\
         int len = atom%03d(str);\n\
-        if (len == 0) {\n\
-            return 0;\n\
+        if (len == -1) {\n\
+            return -1;\n\
         } else {\n\
             str += len;\n\
         }\n\
@@ -641,10 +641,17 @@ int piece%03d(char *str) { // %s\n\
 
     if (piece->max == -1) {
         printf("\n\
+    int allow_empty_match = 1;\n\
     for (;;) {\n\
         int len = atom%03d(str);\n\
-        if (len == 0) {\n\
+        if (len == -1) {\n\
             break;\n\
+        } else if (len == 0) {\n\
+            if (allow_empty_match) {\n\
+                allow_empty_match = 0;\n\
+            } else {\n\
+                break;\n\
+            }\n\
         } else {\n\
             str += len;\n\
         }\n\
@@ -654,7 +661,7 @@ int piece%03d(char *str) { // %s\n\
         printf("\n\
     for (int i = %d; i < %d; ++i) {\n\
         int len = atom%03d(str);\n\
-        if (len == 0) {\n\
+        if (len == -1) {\n\
             break;\n\
         } else {\n\
             str += len;\n\
@@ -683,8 +690,8 @@ int branch%03d(char *str) { // %s\n\
     for (int i = 0; i < branch->size; ++i)
         printf("\n\
     len = piece%03d(str);\n\
-    if (len == 0) {\n\
-        return 0;\n\
+    if (len == -1) {\n\
+        return -1;\n\
     } else {\n\
         str += len;\n\
     }\n\
@@ -706,17 +713,18 @@ int translate_regex(RegexNode *regex) {
     printf("\n\
 int regex%03d(char *str) { // %s\n\
     int len = 0;\n\
+    int max = -1;\n\
 ", cnt, regex->annotation);
     for (int i = 0; i < regex->size; ++i)
         printf("\n\
     len = branch%03d(str);\n\
-    if (len != 0) {\n\
-        return len;\n\
+    if (len > max) {\n\
+        max = len;\n\
     }\n\
 ", branches[i]);
 
     printf("\
-    return 0;\n\
+    return max;\n\
 }\n");
 
     free(branches);

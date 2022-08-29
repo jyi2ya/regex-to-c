@@ -34,7 +34,7 @@ regex-to-c 仅需要一个参数，是待编译的正则表达式。然后她会
 int match(char *str);
 ```
 
-该函数主要功能为，判断给定的字符串 `str`，是否有一个前缀能够与编译好的正则表达式匹配。如果存在这样一个前缀，则返回该前缀的长度，否则返回 `0`。
+该函数主要功能为，判断给定的字符串 `str`，是否有一个前缀能够与编译好的正则表达式匹配。如果存在这样一个前缀，则返回该前缀的长度，否则返回 `-1`。
 
 一个 `match()` 函数的示例如下：
 
@@ -43,7 +43,7 @@ int match(char *str);
 
 int main(int argc, char *argv[]) {
     int len = match(argv[1]));
-    if (len != 0) {
+    if (len >= 0) {
         printf("match for %d chars\n", len);
     } else {
         printf("not match\n");

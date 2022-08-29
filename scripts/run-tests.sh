@@ -53,6 +53,8 @@ run '[a-z]*' 'abcdefg' 'abcdefg'
 run '(ab|cd)*' 'abcdcdabefg' 'abcdcdab'
 run 'a*ax' 'ax' 'ax'
 run 'a+|aab*' 'aab' 'aab'
+run 'ab*c' 'ac' 'ac'
+run 'x(ab)*y' '' ''
 
 echo "$success SUCCESS"
 echo "$failure FAILURE"
