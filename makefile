@@ -1,8 +1,9 @@
-CFLAGS=-std=c99 -g -Wall -Wshadow -Wextra
+CFLAGS=-std=c99 -g -Wall -Wshadow -Wextra -fsanitize=address -O0
+OBJ=src/xutils.o src/token.o src/main.o
 
-target/regex-to-c: src/main.c
-	mkdir -p target
-	$(CC) $(CFLAGS) -o target/regex-to-c src/main.c
+target/regex-to-c: $(OBJ)
+	mkdir -p target/
+	$(CC) $(CFLAGS) $(OBJ) -o target/regex-to-c
 
 clean:
 	rm -rf target/*
