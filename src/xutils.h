@@ -6,13 +6,13 @@
 
 #define panic(msg) \
     do { \
-        fprintf(stderr, "panic@%d: %s\n", __LINE__, msg); \
+        fprintf(stderr, "panic@%s:%d: %s\n", __FILE__, __LINE__, msg); \
         abort(); \
     } while (0)
 
 #define unimplemented(msg) \
     do { \
-        fprintf(stderr, "unimplemented@%d: %s\n", __LINE__, msg); \
+        fprintf(stderr, "unimplemented@%s:%d: %s\n", __FILE__, __LINE__, msg); \
         abort(); \
     } while (0)
 
