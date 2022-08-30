@@ -1,4 +1,4 @@
-CFLAGS=-std=c99 -g -Wall -Wshadow -Wextra -fsanitize=address -O0
+CFLAGS=-std=c11 -g -Wall -Wshadow -Wextra -fsanitize=address -O0
 OBJ=src/xutils.o src/token.o src/main.o src/regtree.o
 
 target/regex-to-c: $(OBJ)
