@@ -14,7 +14,7 @@ static AtomNode *parse_atom(void) {
     Token lookahead = get_token();
 
     if (lookahead.type == T_META) {
-        if (lookahead.u.metachar == '(') {
+        if (lookahead.metachar == '(') {
             result->is_simple_atom = false;
             result->u.regex = parse_regex();
             result->annotation = xstrdup("(");
@@ -27,7 +27,7 @@ static AtomNode *parse_atom(void) {
         result->is_simple_atom = true;
         memset(&result->u, 0, sizeof(result->u));
         for (int i = 0; i < 256; ++i) {
-            if (lookahead.u.allowed[i]) {
+            if (lookahead.allowed[i]) {
                 result->u.allowed[i] = true;
             }
         }
@@ -49,15 +49,15 @@ static PieceNode *parse_piece(void) {
 
     Token lookahead = get_token();
     if (lookahead.type == T_META) {
-        if (lookahead.u.metachar == '*') {
+        if (lookahead.metachar == '*') {
             result->min = 0;
             result->max = -1;
             result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
-        } else if (lookahead.u.metachar == '+') {
+        } else if (lookahead.metachar == '+') {
             result->min = 1;
             result->max = -1;
             result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
-        } else if (lookahead.u.metachar == '?') {
+        } else if (lookahead.metachar == '?') {
             result->min = 0;
             result->max = 1;
             result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
@@ -65,8 +65,8 @@ static PieceNode *parse_piece(void) {
             unget_token(lookahead);
         }
     } else if (lookahead.type == T_BOUND){
-        result->min = lookahead.u.bound[0];
-        result->max = lookahead.u.bound[1];
+        result->min = lookahead.bound[0];
+        result->max = lookahead.bound[1];
         result->annotation = xstrcat(result->annotation, get_token_annotation(lookahead));
     } else {
         unget_token(lookahead);
@@ -86,8 +86,8 @@ static BranchNode *parse_branch(void) {
         Token lookahead = get_token();
 
         if (lookahead.type == T_END
-                || (lookahead.type == T_META && lookahead.u.metachar == ')')
-                || (lookahead.type == T_META && lookahead.u.metachar == '|')) {
+                || (lookahead.type == T_META && lookahead.metachar == ')')
+                || (lookahead.type == T_META && lookahead.metachar == '|')) {
             unget_token(lookahead);
             break;
         }
@@ -116,7 +116,7 @@ static RegexNode *parse_regex(void) {
         Token lookahead = get_token();
 
         if (lookahead.type == T_END
-                || (lookahead.type == T_META && lookahead.u.metachar == ')')) {
+                || (lookahead.type == T_META && lookahead.metachar == ')')) {
             break;
         }
 
@@ -128,7 +128,7 @@ static RegexNode *parse_regex(void) {
             result->size += 1;
             first = false;
         } else {
-            if (lookahead.type == T_META && lookahead.u.metachar == '|') {
+            if (lookahead.type == T_META && lookahead.metachar == '|') {
                 result->branches = xrealloc(result->branches, (result->size + 1) * sizeof(BranchNode*));
                 result->branches[result->size] = parse_branch();
                 result->annotation = xstrcat(result->annotation, xstrdup("|"));

@@ -45,46 +45,46 @@ static Token get_token_escaped(void) {
         panic("regex expression should not end with '\\'");
         break;
     case 'd':
-        fill_by_range('0', '9', result.u.allowed, true);
+        fill_by_range('0', '9', result.allowed, true);
         break;
     case 'D':
-        fill_by_range(1, 255, result.u.allowed, true);
-        fill_by_range('0', '9', result.u.allowed, false);
+        fill_by_range(1, 255, result.allowed, true);
+        fill_by_range('0', '9', result.allowed, false);
         break;
     case 'f':
-        fill_by_char('\x0c', result.u.allowed, true);
+        fill_by_char('\x0c', result.allowed, true);
         break;
     case 'n':
-        fill_by_char('\x0a', result.u.allowed, true);
+        fill_by_char('\x0a', result.allowed, true);
         break;
     case 'r':
-        fill_by_char('\x0d', result.u.allowed, true);
+        fill_by_char('\x0d', result.allowed, true);
         break;
     case 's':
-        fill_by_string(" \f\n\r\t\v", result.u.allowed, true);
+        fill_by_string(" \f\n\r\t\v", result.allowed, true);
         break;
     case 'S':
-        fill_by_range(1, 255, result.u.allowed, true);
-        fill_by_string(" \f\n\r\t\v", result.u.allowed, false);
+        fill_by_range(1, 255, result.allowed, true);
+        fill_by_string(" \f\n\r\t\v", result.allowed, false);
         break;
     case 't':
-        fill_by_char('\x09', result.u.allowed, true);
+        fill_by_char('\x09', result.allowed, true);
         break;
     case 'v':
-        fill_by_char('\x0b', result.u.allowed, true);
+        fill_by_char('\x0b', result.allowed, true);
         break;
     case 'w':
-        fill_by_range('a', 'z', result.u.allowed, true);
-        fill_by_range('A', 'Z', result.u.allowed, true);
-        fill_by_range('0', '9', result.u.allowed, true);
-        fill_by_char('-', result.u.allowed, true);
+        fill_by_range('a', 'z', result.allowed, true);
+        fill_by_range('A', 'Z', result.allowed, true);
+        fill_by_range('0', '9', result.allowed, true);
+        fill_by_char('-', result.allowed, true);
         break;
     case 'W':
-        fill_by_range(1, 255, result.u.allowed, true);
-        fill_by_range('a', 'z', result.u.allowed, false);
-        fill_by_range('A', 'Z', result.u.allowed, false);
-        fill_by_range('0', '9', result.u.allowed, false);
-        fill_by_char('-', result.u.allowed, false);
+        fill_by_range(1, 255, result.allowed, true);
+        fill_by_range('a', 'z', result.allowed, false);
+        fill_by_range('A', 'Z', result.allowed, false);
+        fill_by_range('0', '9', result.allowed, false);
+        fill_by_char('-', result.allowed, false);
         break;
     case 'x':
         if (pattern_read_pos[1] == '\0' || pattern_read_pos[2] == '\0') {
@@ -93,14 +93,14 @@ static Token get_token_escaped(void) {
         if (isxdigit(pattern_read_pos[1]) && isxdigit(pattern_read_pos[2])) {
             int xd;
             sscanf(pattern_read_pos + 1, "%x", &xd);
-            fill_by_char(xd, result.u.allowed, true);
+            fill_by_char(xd, result.allowed, true);
             pattern_read_pos += 2;
         } else {
             panic("'\\xnn' needs two xdigits");
         }
         break;
     default:
-        result.u.allowed[(int)*pattern_read_pos] = true;
+        result.allowed[(int)*pattern_read_pos] = true;
         break;
     }
     pattern_read_pos += 1;
@@ -121,15 +121,15 @@ static Token get_token_charset(void) {
     // for the first character in the bracket
     char first = *pattern_read_pos;
     if (first == ']' || first == '-') {
-        result.u.allowed[(int)first] = fill;
+        result.allowed[(int)first] = fill;
         pattern_read_pos += 1;
     } else if (first == '^') {
-        fill_by_range(1, 255, result.u.allowed, fill);
+        fill_by_range(1, 255, result.allowed, fill);
         fill = false;
         pattern_read_pos += 1;
         first = *pattern_read_pos;
         if (first == ']' || first == '-') {
-            result.u.allowed[(int)first] = fill;
+            result.allowed[(int)first] = fill;
             pattern_read_pos += 1;
         }
     }
@@ -142,10 +142,10 @@ static Token get_token_charset(void) {
         case '-':
             if (pattern_read_pos[1] != ']') {
                 fill_by_range((int)pattern_read_pos[-1], \
-                        (int)pattern_read_pos[1], result.u.allowed, fill);
+                        (int)pattern_read_pos[1], result.allowed, fill);
                 pattern_read_pos += 1;
             } else { // ']' can be the last character in bracket
-                result.u.allowed[(int)*pattern_read_pos] = fill;
+                result.allowed[(int)*pattern_read_pos] = fill;
             }
             pattern_read_pos += 1;
             break;
@@ -160,43 +160,43 @@ static Token get_token_charset(void) {
             pattern_read_pos += 2;
             int shift = 0;
             if (cmp_class(pattern_read_pos, "ascii", shift)) {
-                fill_by_range(0, 255, result.u.allowed, fill);
+                fill_by_range(0, 255, result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "alnum", shift)) {
-                fill_by_range('a', 'z', result.u.allowed, fill);
-                fill_by_range('A', 'Z', result.u.allowed, fill);
-                fill_by_range('0', '9', result.u.allowed, fill);
+                fill_by_range('a', 'z', result.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "alpha", shift)) {
-                fill_by_range('a', 'z', result.u.allowed, fill);
-                fill_by_range('A', 'Z', result.u.allowed, fill);
+                fill_by_range('a', 'z', result.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "blank", shift)) {
-                fill_by_string(" \t", result.u.allowed, fill);
+                fill_by_string(" \t", result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "cntrl", shift)) {
-                fill_by_range('\x01', '\x1F', result.u.allowed, fill);
-                fill_by_char('\x7F', result.u.allowed, fill);
+                fill_by_range('\x01', '\x1F', result.allowed, fill);
+                fill_by_char('\x7F', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "digit", shift)) {
-                fill_by_range('0', '9', result.u.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "graph", shift)) {
-                fill_by_range('\x21', '\x7E', result.u.allowed, fill);
+                fill_by_range('\x21', '\x7E', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "lower", shift)) {
-                fill_by_range('a', 'z', result.u.allowed, fill);
+                fill_by_range('a', 'z', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "print", shift)) {
-                fill_by_range('\x20', '\x7E', result.u.allowed, fill);
+                fill_by_range('\x20', '\x7E', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "punct", shift)) {
-                fill_by_string("][!\"#$%&'()*+,./:;<=>?@\\^_`{|}~-", result.u.allowed, \
+                fill_by_string("][!\"#$%&'()*+,./:;<=>?@\\^_`{|}~-", result.allowed, \
                         fill);
             } else if (cmp_class(pattern_read_pos, "space", shift)) {
-                fill_by_string(" \t\r\n\v\f", result.u.allowed, fill);
+                fill_by_string(" \t\r\n\v\f", result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "upper", shift)) {
-                fill_by_range('A', 'Z', result.u.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "word", shift)) {
-                fill_by_range('a', 'z', result.u.allowed, fill);
-                fill_by_range('A', 'Z', result.u.allowed, fill);
-                fill_by_range('0', '9', result.u.allowed, fill);
-                fill_by_char('-', result.u.allowed, fill);
+                fill_by_range('a', 'z', result.allowed, fill);
+                fill_by_range('A', 'Z', result.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
+                fill_by_char('-', result.allowed, fill);
             } else if (cmp_class(pattern_read_pos, "xdigit", shift)) {
-                fill_by_range('a', 'f', result.u.allowed, fill);
-                fill_by_range('A', 'F', result.u.allowed, fill);
-                fill_by_range('0', '9', result.u.allowed, fill);
+                fill_by_range('a', 'f', result.allowed, fill);
+                fill_by_range('A', 'F', result.allowed, fill);
+                fill_by_range('0', '9', result.allowed, fill);
             } else {
                 panic("invalid character class name");
             }
@@ -208,7 +208,7 @@ static Token get_token_charset(void) {
             break;
         default:
 not_special:
-            result.u.allowed[(int)*pattern_read_pos] = fill;
+            result.allowed[(int)*pattern_read_pos] = fill;
             pattern_read_pos += 1;
             break;
         }
@@ -231,7 +231,7 @@ static Token get_token_bound() {
         switch (state) {
         case S_START:
             if (*pattern_read_pos == '{') {
-                result.u.bound[0] = 0;
+                result.bound[0] = 0;
                 pattern_read_pos += 1;
                 state = S_READLEFT_BEGIN;
             } else {
@@ -241,7 +241,7 @@ static Token get_token_bound() {
 
         case S_READLEFT_BEGIN:
             if (isdigit(*pattern_read_pos)) {
-                result.u.bound[0] = *pattern_read_pos - '0';
+                result.bound[0] = *pattern_read_pos - '0';
                 pattern_read_pos += 1;
                 state = S_READLEFT;
             } else {
@@ -251,16 +251,16 @@ static Token get_token_bound() {
 
         case S_READLEFT:
             if (*pattern_read_pos == ',') {
-                result.u.bound[1] = -1;
+                result.bound[1] = -1;
                 pattern_read_pos += 1;
                 state = S_READRIGHT;
             } else if (*pattern_read_pos == '}') {
-                result.u.bound[1] = result.u.bound[0];
+                result.bound[1] = result.bound[0];
                 pattern_read_pos += 1;
                 state = S_END;
             } else if (isdigit(*pattern_read_pos)) {
-                result.u.bound[0] *= 10;
-                result.u.bound[0] += *pattern_read_pos - '0';
+                result.bound[0] *= 10;
+                result.bound[0] += *pattern_read_pos - '0';
                 pattern_read_pos += 1;
                 state = S_READLEFT;
             } else {
@@ -273,11 +273,11 @@ static Token get_token_bound() {
                 pattern_read_pos += 1;
                 state = S_END;
             } else if (isdigit(*pattern_read_pos)) {
-                if (result.u.bound[1] == -1) {
-                    result.u.bound[1] = *pattern_read_pos - '0';
+                if (result.bound[1] == -1) {
+                    result.bound[1] = *pattern_read_pos - '0';
                 } else {
-                    result.u.bound[1] *= 10;
-                    result.u.bound[1] += *pattern_read_pos - '0';
+                    result.bound[1] *= 10;
+                    result.bound[1] += *pattern_read_pos - '0';
                 }
                 pattern_read_pos += 1;
                 state = S_READRIGHT;
@@ -290,7 +290,7 @@ static Token get_token_bound() {
         }
     }
 
-    if (result.u.bound[1] >= 0 && result.u.bound[0] > result.u.bound[1]) {
+    if (result.bound[1] >= 0 && result.bound[0] > result.bound[1]) {
         panic("illegal bound");
     }
 
@@ -313,19 +313,19 @@ extern Token get_token(void) {
         result = get_token_bound();
     } else if (strchr("^$*+?{}()|", *pattern_read_pos) != NULL) {
         result.type = T_META;
-        result.u.metachar = *pattern_read_pos;
+        result.metachar = *pattern_read_pos;
         pattern_read_pos += 1;
     } else if (*pattern_read_pos == '.') {
         result.type = T_CHARSET;
         // `.` should not match '\0'
         for (int i = 1; i < 256; ++i)
-            result.u.allowed[i] = true;
+            result.allowed[i] = true;
         pattern_read_pos += 1;
     } else if (*pattern_read_pos == '[') {
         result = get_token_charset();
     } else {
         result.type = T_CHARSET;
-        result.u.allowed[(int)*pattern_read_pos] = true;
+        result.allowed[(int)*pattern_read_pos] = true;
         pattern_read_pos += 1;
     }
 
