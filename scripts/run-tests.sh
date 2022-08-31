@@ -8,10 +8,11 @@ cd target/
 
 regexp=""
 str=""
+bin="${1:-regex-to-c}"
 
 run_match() {
     name="$(mktemp finalXXX)"
-    ./regex-to-c "$regexp" >> "$name".c
+    ./"$bin" "$regexp" >> "$name".c
 
     cat << 'EOF' >> "$name".c
 #include <stdio.h>
