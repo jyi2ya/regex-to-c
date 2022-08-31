@@ -15,7 +15,7 @@ typedef struct {
     union {
         RegexNode *regex;
         bool allowed[256];
-    } u;
+    };
 } AtomNode;
 
 typedef struct {

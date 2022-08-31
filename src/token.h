@@ -7,13 +7,14 @@ typedef enum {
 
 typedef struct {
     TokenTypeTag type;
+    const char *anno_start;
+    int anno_len;
+
     union {
         bool allowed[256];
         int bound[2];
         int metachar;
-    } u;
-    const char *anno_start;
-    int anno_len;
+    };
 } Token;
 
 extern void set_pattern_str(char *str);
