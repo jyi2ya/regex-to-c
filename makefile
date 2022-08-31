@@ -9,4 +9,4 @@ regex-to-c: $(OBJ) src/main.o
 
 clean:
 	rm -rf target/*
-	rm src/*.o
+	rm -f src/*.o
