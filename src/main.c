@@ -22,14 +22,14 @@ int atom%03d(char *str) { // %s\n\
     switch (((int)*str + 256) %% 256) {\n\
 ", cnt, atom->annotation);
         for (int i = 0; i < 256; ++i)
-            if (atom->u.allowed[i])
+            if (atom->allowed[i])
                 printf("        case %d: return 1;\n", i);
         printf("\
     }\n\
     return -1;\n\
 }\n");
     } else {
-        int id = translate_regex(atom->u.regex);
+        int id = translate_regex(atom->regex);
 
         printf("\
 int atom%03d(char *str) { // %s\n\

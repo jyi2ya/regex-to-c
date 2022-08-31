@@ -16,19 +16,19 @@ static AtomNode *parse_atom(void) {
     if (lookahead.type == T_META) {
         if (lookahead.metachar == '(') {
             result->is_simple_atom = false;
-            result->u.regex = parse_regex();
+            result->regex = parse_regex();
             result->annotation = xstrdup("(");
-            result->annotation = xstrcat(result->annotation, xstrdup(result->u.regex->annotation));
+            result->annotation = xstrcat(result->annotation, xstrdup(result->regex->annotation));
             result->annotation = xstrcat(result->annotation, xstrdup(")"));
         } else {
             panic("illegal regex");
         }
     } else if (lookahead.type == T_CHARSET) {
         result->is_simple_atom = true;
-        memset(&result->u, 0, sizeof(result->u));
+        memset(&result->allowed, 0, sizeof(bool) * 256);
         for (int i = 0; i < 256; ++i) {
             if (lookahead.allowed[i]) {
-                result->u.allowed[i] = true;
+                result->allowed[i] = true;
             }
         }
         result->annotation = get_token_annotation(lookahead);
@@ -156,7 +156,7 @@ extern void regtree_drop(RegexNode *regex) {
             PieceNode *piece = branch->pieces[j];
 
             if (!piece->atom->is_simple_atom) {
-                regtree_drop(piece->atom->u.regex);
+                regtree_drop(piece->atom->regex);
             }
 
             free(piece->atom->annotation);
